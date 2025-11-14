@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>P5.js 居中畫布与隐藏菜单</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.js"></script>
+    <script src="sketch.js"></script>
+    <style>
+        /* 确保整个页面为黑色背景 */
+        body {
+            background-color: #000000;
+            margin: 0;
+            overflow: hidden; /* 防止滚动条出现 */
+            font-family: Arial, sans-serif;
+        }
+
+
+
+
+        /* 隐藏式侧边栏样式 */
+        #sidebar {
+            position: fixed; /* 固定在窗口的左侧 */
+            top: 0;
+            left: -250px; /* 初始状态：隐藏在屏幕外 (菜单宽度设为 250px) */
+            width: 250px;
+            height: 100%;
+            background-color: rgba(30, 30, 30, 0.9); /* 深色半透明背景 */
+            padding-top: 50px;
+            /* 关键：设置平滑过渡效果（慢慢移出） */
+            transition: left 0.5s ease-in-out;
+            z-index: 1000; /* 确保菜单在画布之上 */
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+
+
+
+        /* 菜单滑出时的状态 */
+        #sidebar.active {
+            left: 0;
+        }
+
+
+
+
+        /* 菜单选项列表样式 */
+        #sidebar ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+
+
+
+        #sidebar ul li a {
+            display: block;
+            padding: 15px 25px;
+            text-decoration: none;
+            color: white; /* 菜单文字颜色 */
+            font-size: 32px; /* 菜单文字大小 */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            transition: background-color 0.3s;
+        }
+
+
+
+
+        #sidebar ul li a:hover {
+            background-color: #004a93; /* 鼠标悬停时的背景色 */
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <ul>
+            <li><a href="#" id="unit1-work">第一單元作品</a></li>
+            <li><a href="#" id="lecture-notes">第一單元講義</a></li>
+            <li><a href="#" id="quiz-system">測驗系統</a></li>
+            <li><a href="#" id="quiz-notes">測驗卷筆記</a></li>
+            <li><a href="#" id="work-notes">作品筆記</a></li>
+            <li><a href="#" id="tku-link">淡江大學</a></li>
+            <li><a href="#" id="home-link">回到首頁</a></li>
+        </ul>
+    </div>
+   
+    <div id="iframe-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70vw; height: 85vh; z-index: 900;">
+        <iframe id="lecture-iframe" style="width: 100%; height: 100%; border: none;" src=""></iframe>
+    </div>
+   
+    <div id="quiz-iframe-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70vw; height: 85vh; z-index: 900;">
+        <iframe id="quiz-iframe" style="width: 100%; height: 100%; border: none;" src=""></iframe>
+    </div>
+   
+    <div id="unit1-work-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70vw; height: 85vh; z-index: 900;">
+        <iframe id="unit1-work-iframe" style="width: 100%; height: 100%; border: none;" src=""></iframe>
+    </div>
+   
+    <div id="quiz-notes-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70vw; height: 85vh; z-index: 900;">
+        <iframe id="quiz-notes-iframe" style="width: 100%; height: 100%; border: none;" src=""></iframe>
+    </div>
+   
+    <div id="work-notes-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70vw; height: 85vh; z-index: 900;">
+        <iframe id="work-notes-iframe" style="width: 100%; height: 100%; border: none;" src=""></iframe>
+    </div>
+   
+    <div id="tku-container" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70vw; height: 85vh; z-index: 900;">
+        <iframe id="tku-iframe" style="width: 100%; height: 100%; border: none;" src=""></iframe>
+    </div>
+    <div id="home-content" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: white; font-family: Arial, sans-serif; z-index: 900;">
+        <h1 style="margin-bottom: 35px; font-size: 56px; font-weight: bold; text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);">淡江大學 教育科技學系</h1>
+        <p style="font-size: 56px; font-weight: 500; text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);">學號:414730266 姓名:留妍瑜</p>
+    </div>
+   
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // 獲取所有相關元素
+            const sidebar = document.getElementById('sidebar');
+            const unit1WorkLink = document.getElementById('unit1-work');
+            const unit1WorkContainer = document.getElementById('unit1-work-container');
+            const unit1WorkIframe = document.getElementById('unit1-work-iframe');
+
+
+            // 筆記連結和容器
+            const quizNotesLink = document.getElementById('quiz-notes');
+            const quizNotesContainer = document.getElementById('quiz-notes-container');
+            const quizNotesIframe = document.getElementById('quiz-notes-iframe');
+           
+            const workNotesLink = document.getElementById('work-notes');
+            const workNotesContainer = document.getElementById('work-notes-container');
+            const workNotesIframe = document.getElementById('work-notes-iframe');
+           
+            // **** START: 新增淡江大學相關元素 ****
+            const tkuLink = document.getElementById('tku-link');
+            const tkuContainer = document.getElementById('tku-container');
+            const tkuIframe = document.getElementById('tku-iframe');
+            // **** END: 新增淡江大學相關元素 ****
+           
+            const homeLink = document.getElementById('home-link');
+            const homeContent = document.getElementById('home-content');
+
+
+            // 其他內容容器的列表 (以便於集中管理隱藏/顯示)
+            const otherContainers = [
+                document.getElementById('iframe-container'),
+                document.getElementById('quiz-iframe-container'),
+                document.getElementById('unit1-work-container'),
+                document.getElementById('quiz-notes-container'),
+                document.getElementById('work-notes-container'),
+                document.getElementById('tku-container'), // 新增
+                document.getElementById('home-content')
+            ];
+
+
+            // 統一隱藏所有內容區塊的函數
+            function hideAllContent() {
+                otherContainers.forEach(container => {
+                    if (container) container.style.display = 'none';
+                });
+            }
+
+
+            // 輔助函數：隱藏側邊欄
+            function hideSidebar() {
+                 if (sidebar && sidebar.classList.contains('active')) {
+                    sidebar.classList.remove('active');
+                }
+            }
+
+
+
+
+            // 1. 「第一單元作品」連結邏輯
+            if (unit1WorkLink) {
+                unit1WorkLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    hideAllContent();
+                   
+                    if (unit1WorkIframe && unit1WorkContainer) {
+                        unit1WorkIframe.src = 'https://lyanyu975-boop.github.io/20251110./';
+                        unit1WorkContainer.style.display = 'block';
+                    }
+                    hideSidebar();
+                });
+            }
+
+
+            // 2. 「測驗卷筆記」連結邏輯
+            if (quizNotesLink) {
+                quizNotesLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    hideAllContent();
+
+
+                    if (quizNotesIframe && quizNotesContainer) {
+                        quizNotesIframe.src = 'about:blank'; // 請替換為您的測驗卷筆記連結
+                        quizNotesContainer.style.display = 'block';
+                    }
+                    hideSidebar();
+                });
+            }
+
+
+            // 3. 「作品筆記」連結邏輯
+            if (workNotesLink) {
+                workNotesLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    hideAllContent();
+
+
+                    if (workNotesIframe && workNotesContainer) {
+                        workNotesIframe.src = 'about:blank'; // 請替換為您的作品筆記連結
+                        workNotesContainer.style.display = 'block';
+                    }
+                    hideSidebar();
+                });
+            }
+
+
+            // **** START: 新增「淡江大學」連結邏輯 ****
+            if (tkuLink) {
+                tkuLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    hideAllContent();
+
+
+                    if (tkuIframe && tkuContainer) {
+                        // 連結到淡江大學首頁
+                        tkuIframe.src = 'https://www.tku.edu.tw/';
+                        tkuContainer.style.display = 'block';
+                    }
+                    hideSidebar();
+                });
+            }
+            // **** END: 新增「淡江大學」連結邏輯 ****
+
+
+           
+            // 4. 「回到首頁」連結邏輯 (更新)
+            if (homeLink) {
+                homeLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                   
+                    hideAllContent(); // 隱藏所有 iframe
+                   
+                    // 清空所有 iframe 的 src
+                    document.getElementById('lecture-iframe').src = '';
+                    document.getElementById('quiz-iframe').src = '';
+                    document.getElementById('unit1-work-iframe').src = '';
+                    if (quizNotesIframe) quizNotesIframe.src = '';
+                    if (workNotesIframe) workNotesIframe.src = '';
+                    if (tkuIframe) tkuIframe.src = ''; // 清空淡江大學 iframe src
+
+
+                   
+                    // 顯示首頁內容
+                    if (homeContent) {
+                        homeContent.style.display = 'block';
+                    }
+                   
+                    hideSidebar();
+                });
+            }
+
+
+            // 注意：其他連結 (講義、測驗系統) 的邏輯應在 sketch.js 中處理，如下所示。
+        });
+    </script>
+</body>
+</html>
+
